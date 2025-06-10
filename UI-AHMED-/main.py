@@ -5,38 +5,6 @@ import base64
 from main_predict import predict_brain_tumor_batch  # updated function for batch
 
 
-def generate_zoomable_html(img: Image.Image) -> str:
-    # (Same as your existing code)
-    buffer = io.BytesIO()
-    img.save(buffer, format="PNG")
-    img_base64 = base64.b64encode(buffer.getvalue()).decode()
-
-    return f"""
-    <style>
-        #zoomable-img {{
-            max-width: 100%;
-            max-height: 80vh;
-            transition: transform 0.3s ease;
-            cursor: zoom-in;
-        }}
-    </style>
-    <img id="zoomable-img" src="data:image/png;base64,{img_base64}" onclick="toggleZoom()">
-    <script>
-        let isZoomed = false;
-        function toggleZoom() {{
-            const img = document.getElementById("zoomable-img");
-            if (isZoomed) {{
-                img.style.transform = "scale(1)";
-                img.style.cursor = "zoom-in";
-            }} else {{
-                img.style.transform = "scale(2)";
-                img.style.cursor = "zoom-out";
-            }}
-            isZoomed = !isZoomed;
-        }}
-    </script>
-    """
-
 with gr.Blocks() as app: 
     gr.Markdown("## 🧠 Brain Tumor Detection using Vision Transformer (ViT)")
     gr.Markdown("Upload one or more MRI images to detect brain tumors and view images in Full Mode with zoom support.")

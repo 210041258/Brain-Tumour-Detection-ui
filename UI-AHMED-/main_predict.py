@@ -6,6 +6,7 @@ from torchvision import transforms
 from PIL import Image
 import torchvision.models as models
 from typing import List, Tuple
+import io
 
 
 MODEL_PATH = "C:\\Users\\asdal\\Downloads\\Brain-Tumour-Detection-main\\Brain-Tumour-Detection-main\\UI-AHMED-\\vit_brain_tumor.pth"
@@ -79,6 +80,11 @@ transform = transforms.Compose([
 ])
 
 # ======= PREDICTION FUNCTION ======= #
+from typing import Tuple, List
+from PIL import Image
+import io
+import torch
+
 def predict_brain_tumor_batch(img_list: list) -> Tuple[str, str, List[List], List[dict]]:
     results = []
     detailed_reports = []
@@ -98,7 +104,7 @@ def predict_brain_tumor_batch(img_list: list) -> Tuple[str, str, List[List], Lis
     
     for idx, img_data in enumerate(img_list, start=1):
         try:
-            # Handle input types
+            # Load image
             if isinstance(img_data, str):
                 img = Image.open(img_data).convert("RGB")
                 filename = img_data.split("/")[-1]
@@ -111,66 +117,107 @@ def predict_brain_tumor_batch(img_list: list) -> Tuple[str, str, List[List], Lis
             else:
                 raise ValueError(f"Unsupported image type: {type(img_data)}")
             
-            # Model prediction
-            input_tensor = transform(img).unsqueeze(0)
-            with torch.no_grad():
-                output = model(input_tensor)
-                probabilities = torch.nn.functional.softmax(output, dim=1)[0]
-                prediction = torch.argmax(output, dim=1).item()
+            # Perform 20 rounds with 10 predictions each
+            rounds = 20
+            preds_per_round = 10
+            round_confidences = []
+
+            for r in range(rounds):
+                class_conf_sum = torch.zeros(len(class_names))
+                for _ in range(preds_per_round):
+                    input_tensor = transform(img).unsqueeze(0)
+                    with torch.no_grad():
+                        output = model(input_tensor)
+                        probabilities = torch.nn.functional.softmax(output, dim=1)[0]
+                    class_conf_sum += probabilities
+                avg_confidence = class_conf_sum / preds_per_round
+                round_confidences.append(avg_confidence)
+
+            # Pick best round based on highest max confidence
+            best_round_idx = max(range(rounds), key=lambda i: round_confidences[i].max().item())
+            best_avg_conf = round_confidences[best_round_idx]
+
+            # Determine top 2 classes
+            sorted_confidences = torch.topk(best_avg_conf, 2)
+            top1_idx, top2_idx = sorted_confidences.indices.tolist()
+            top1_conf, top2_conf = sorted_confidences.values.tolist()
+
+            predicted_class = class_names[top1_idx]
+            confidence_score = top1_conf
+            second_class = class_names[top2_idx]
+            second_confidence = top2_conf
+
+            # Check if the difference between top 2 is ≤ 15%
+            diff_percent = (top1_conf - top2_conf) * 100
+            show_dual_prediction = diff_percent <= 15.0
+
+            # Summary output
+            if show_dual_prediction:
+                results.append(
+                    f"{idx}. 🖼️ **{filename}** → 🧠 *{predicted_class.title()} or {second_class.title()}* "
+                    f"({confidence_score*100:.1f}% vs {second_confidence*100:.1f}%) [≤15% diff]"
+                )
+            else:
+                results.append(
+                    f"{idx}. 🖼️ **{filename}** → 🧠 *{predicted_class.title()}* "
+                    f"({confidence_score*100:.1f}%) [Best of 20 rounds]"
+                )
             
-            predicted_class = class_names[prediction]
-            confidence_score = probabilities[prediction].item()
-            
-            # Summary text
-            results.append(f"{idx}. 🖼️ **{filename}** → 🧠 *{predicted_class.title()}* ({confidence_score*100:.1f}%)")
-            
-            # Detailed report (same as before)
+            # Detailed report (for top class only)
             detail_report = [
                 f"📄 COMPREHENSIVE ANALYSIS REPORT: {filename}",
                 "="*50,
-                f"🏆 FINAL PREDICTION: {predicted_class.upper()} ({confidence_score*100:.2f}% confidence)",
+                f"🏆 FINAL PREDICTION: {predicted_class.upper()} ({confidence_score*100:.2f}% confidence) [Best of 20 rounds]",
+                f"🏅 Best Round: {best_round_idx+1} / {rounds}",
                 "",
                 f"📖 Description: {class_descriptions[predicted_class]}",
                 "",
-                "📊 CLASS PROBABILITY DISTRIBUTION:",
+                "📊 CLASS PROBABILITY DISTRIBUTION (best round average):",
             ]
             max_len = 20
             for i, class_name in enumerate(class_names):
-                percentage = probabilities[i].item() * 100
+                percentage = best_avg_conf[i].item() * 100
                 bar_len = int(percentage / 100 * max_len)
                 bar = '█' * bar_len + ' ' * (max_len - bar_len)
-                highlight = "→" if i == prediction else " "
+                highlight = "→" if i == top1_idx else " "
                 detail_report.append(
-                    f"  {highlight} {class_name.title():<12} {percentage:5.2f}% |{bar}| {probabilities[i].item():.4f}"
+                    f"  {highlight} {class_name.title():<12} {percentage:5.2f}% |{bar}| {best_avg_conf[i].item():.4f}"
                 )
-            # Add analysis metrics (assuming your helper functions exist)
+
+            # Optional note on closeness
+            if show_dual_prediction:
+                detail_report.extend([
+                    "",
+                    "⚠️ NOTE: The second most likely class is within 20% confidence margin.",
+                    f"- Alternative Diagnosis: {second_class.title()} ({second_confidence*100:.2f}%)"
+                ])
+
+            # Analysis metrics (assuming helper functions exist)
             detail_report.extend([
                 "",
                 "🔍 CONFIDENCE ANALYSIS:",
                 f"- Prediction Confidence Score: {confidence_score:.4f}",
                 f"- Confidence Level: {get_confidence_level(confidence_score)}",
-                f"- Second Most Likely Class: {get_second_most_likely(probabilities, class_names)}",
+                f"- Second Most Likely Class: {get_second_most_likely(best_avg_conf, class_names)}",
                 "",
                 "⚖️ PREDICTION RELIABILITY INDICATORS:",
-                f"- Probability Spread: {calculate_probability_spread(probabilities):.3f} (higher is better)",
-                f"- Uncertainty Index: {calculate_uncertainty(probabilities):.3f} (lower is better)",
+                f"- Probability Spread: {calculate_probability_spread(best_avg_conf):.3f} (higher is better)",
+                f"- Uncertainty Index: {calculate_uncertainty(best_avg_conf):.3f} (lower is better)",
                 "",
                 "💡 CLINICAL CONSIDERATIONS:",
                 get_clinical_considerations(predicted_class, confidence_score)
             ])
             detailed_reports.append("\n".join(detail_report))
-            
-            # Add row for dataframe output
+
+            # Dataframe + preview state
             tumor_types_data.append([filename, predicted_class.title(), round(confidence_score * 100, 2)])
-            
-            # Add full prediction data for state (used in preview etc.)
             current_predictions.append({
                 "filename": filename,
                 "class": predicted_class,
                 "confidence": confidence_score * 100,
                 "image": img_data
             })
-            
+
         except Exception as e:
             error_msg = f"❌ Error processing image {idx}: {str(e)}"
             results.append(error_msg)

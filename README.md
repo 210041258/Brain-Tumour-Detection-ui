@@ -1,49 +1,6 @@
-# Brain-Tumour-Detection
-Brain tumour Detection System from MRI input.
 
+# Screenshots Of Ui
 
-## ID : 210041240
-## Branch: part1_vit
-# Brain Tumour Detection – ML Project  
-## My Contribution
-
-As part of this machine learning project on brain tumour detection, I was responsible for implementing the core deep learning model and ensuring rigorous data integrity between training and testing phases.
-
-### ✅ Strict Dataset Separation
-
-**High caution was taken to ensure that the training and testing datasets were collected from completely separate and independently referenced sources.**  
-This was a mandatory requirement and was followed strictly throughout the project pipeline to avoid any data leakage or evaluation bias.
-
-### 🧠 Vision Transformer (ViT)
-
-I implemented a **Vision Transformer (ViT)** model — a less conventional but powerful architecture for this dataset — as we were encouraged to apply unique and creative solutions. The ViT model provided strong performance for this task.
-
-### 📈 Visualization & Evaluation
-
-I created detailed visualizations for model interpretation:
-- **Confusion Matrix**
-- **Training & Loss Curves**
-
-These helped assess classification performance and model behavior during training.
-
-### 🧪 Sample Input Interface
-
-To support easy testing:
-- The **first half** of the notebook is for training the model.
-- The **later part** provides a **simplified cell** to directly load the trained model for testing — **bypassing retraining** and enabling quick evaluation.
-
-> ⚠️ **Note:** Ensure the required **.zip files are uploaded properly to Google Drive**.  
-> Dataset download links (raw and preprocessed) are provided in `.txt` files.
-
----
-
-## 🏁 Final Verdict
-
-> In most runs, the model produced **97% accuracy** for split unseen data from the same dataset, and **95% accuracy** on a completely separate dataset.
-
-> The model achieved **94% to 96% accuracy** on a completely separate testing dataset collected from a different source, indicating strong generalization.
-
-> **High caution** was taken to ensure that the training and testing datasets were collected from **completely separate and independently referenced sources**.
-
-This high performance is likely due to the pretrained **ViT model** and **consistent preprocessing**, with **no overlap or data leakage** between training and testing sets.
----------------------------------------------------------------------
+![Screenshot 2025-06-11 195103](https://github.com/user-attachments/assets/51649eb7-ffcd-46c7-9a96-0891518110ff)
+![Screenshot 2025-06-11 195058](https://github.com/user-attachments/assets/2f2dbf65-8e2e-4f39-9926-29637a60d437)
+![Screenshot 2025-06-11 195047](https://github.com/user-attachments/assets/08b2106e-ebda-4191-b2ea-2fe1162425c2)

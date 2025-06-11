@@ -90,7 +90,7 @@ def predict_brain_tumor_batch(img_list: list) -> Tuple[str, str, List[List], Lis
     detailed_reports = []
     tumor_types_data = []    # For dataframe: list of rows [image, prediction, confidence %]
     current_predictions = [] # For state, detailed info per image
-    
+
     class_names = ['glioma', 'meningioma', 'notumor', 'pituitary']
     class_descriptions = {
         'glioma': 'A type of tumor that occurs in the brain and spinal cord, arising from glial cells.',
@@ -98,10 +98,31 @@ def predict_brain_tumor_batch(img_list: list) -> Tuple[str, str, List[List], Lis
         'notumor': 'No tumor detected in the brain MRI scan.',
         'pituitary': 'A tumor affecting the pituitary gland at the base of the brain that controls many hormonal functions.'
     }
-    
+
+    # Improved CSS styles for HTML output (fixed for better compatibility)
+    css_styles = """
+    <style type="text/css">
+    .report-container { font-family: 'Segoe UI', Arial, sans-serif; background: #f8fafc; border-radius: 12px; padding: 24px; margin-bottom: 32px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+    .report-title { font-size: 1.3em; font-weight: bold; color: #2d3748; margin-bottom: 8px; }
+    .divider { border-bottom: 2px solid #e2e8f0; margin: 12px 0 18px 0; }
+    .prediction-main { font-size: 1.1em; color: #2563eb; font-weight: 600; margin-bottom: 8px; }
+    .desc { color: #374151; margin-bottom: 10px; }
+    .prob-table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
+    .prob-table th, .prob-table td { padding: 6px 10px; text-align: left; border: none; }
+    .prob-table th { background: #e0e7ef; color: #22223b; }
+    .prob-bar, .prob-bar-main { display: inline-block; height: 16px; border-radius: 6px; vertical-align: middle; }
+    .prob-bar { background: #c7d2fe; }
+    .prob-bar-main { background: #6366f1; }
+    .note { color: #b91c1c; font-weight: 500; margin: 8px 0; }
+    .metrics { background: #f1f5f9; border-radius: 8px; padding: 10px 14px; margin: 10px 0; }
+    .clinical { background: #fef9c3; border-radius: 8px; padding: 10px 14px; color: #92400e; margin: 10px 0; }
+    .filename { color: #64748b; font-size: 0.98em; }
+    </style>
+    """
+
     if not img_list:
         return ("⚠️ No images uploaded", "Please upload MRI images for analysis", [], [])
-    
+
     for idx, img_data in enumerate(img_list, start=1):
         try:
             # Load image
@@ -116,8 +137,8 @@ def predict_brain_tumor_batch(img_list: list) -> Tuple[str, str, List[List], Lis
                 filename = f"image_{idx}"
             else:
                 raise ValueError(f"Unsupported image type: {type(img_data)}")
-            
-            # Perform 20 rounds with 10 predictions each
+
+            # Perform 5 rounds with 10 predictions each
             rounds = 20
             preds_per_round = 10
             round_confidences = []
@@ -151,63 +172,218 @@ def predict_brain_tumor_batch(img_list: list) -> Tuple[str, str, List[List], Lis
             diff_percent = (top1_conf - top2_conf) * 100
             show_dual_prediction = diff_percent <= 15.0
 
-            # Summary output
+            # Summary output (plain text)
+            # Improved summary output with enhanced CSS styling
             if show_dual_prediction:
                 results.append(
-                    f"{idx}. 🖼️ **{filename}** → 🧠 *{predicted_class.title()} or {second_class.title()}* "
-                    f"({confidence_score*100:.1f}% vs {second_confidence*100:.1f}%) [≤15% diff]"
+                    f"""
+                    <div style="
+                        background: linear-gradient(90deg, #fef9c3 60%, #f1f5f9 100%);
+                        border-radius: 10px;
+                        padding: 16px 22px;
+                        margin: 12px 0 18px 0;
+                        box-shadow: 0 2px 8px rgba(99,102,241,0.07);
+                        border-left: 6px solid #f59e42;
+                        font-family: 'Segoe UI', Arial, sans-serif;
+                        font-size: 1.08em;
+                        color: #92400e;
+                        display: flex;
+                        align-items: center;
+                        gap: 12px;
+                    ">
+                        <span style="font-size:1.3em;">🖼️</span>
+                        <span class="filename" style="color:#64748b;font-style:italic;">{filename}</span>
+                        <span style="margin-left:8px;">
+                            <b style="color:#b45309;">🧠 {predicted_class.title()} <span style="font-weight:400;">or</span> {second_class.title()}</b>
+                            <span style="color:#b45309;">({confidence_score*100:.1f}% vs {second_confidence*100:.1f}%)</span>
+                            <span style="background:#fde68a;color:#b45309;padding:2px 8px;border-radius:6px;font-size:0.98em;margin-left:8px;">≤15% diff</span>
+                        </span>
+                    </div>
+                    """
                 )
             else:
                 results.append(
-                    f"{idx}. 🖼️ **{filename}** → 🧠 *{predicted_class.title()}* "
-                    f"({confidence_score*100:.1f}%) [Best of 20 rounds]"
+                    f"""
+                    <div style="
+                        background: linear-gradient(90deg, #e0e7ef 60%, #f1f5f9 100%);
+                        border-radius: 10px;
+                        padding: 16px 22px;
+                        margin: 12px 0 18px 0;
+                        box-shadow: 0 2px 8px rgba(99,102,241,0.07);
+                        border-left: 6px solid #6366f1;
+                        font-family: 'Segoe UI', Arial, sans-serif;
+                        font-size: 1.08em;
+                        color: #1e293b;
+                        display: flex;
+                        align-items: center;
+                        gap: 12px;
+                    ">
+                        <span style="font-size:1.3em;">🖼️</span>
+                        <span class="filename" style="color:#64748b;font-style:italic;">{filename}</span>
+                        <span style="margin-left:15px;">
+                            <b style="color:#2563eb;">🧠 {predicted_class.title()}</b>
+                            <span style="color:#2563eb;">({confidence_score*100:.1f}%)</span>
+                            <span style="background:#c7d2fe;color:#3730a3;padding:2px 8px;border-radius:6px;font-size:0.98em;margin-left:8px;">Best of 20 rounds</span>
+                        </span>
+                    </div>
+                    """
                 )
-            
-            # Detailed report (for top class only)
-            detail_report = [
-                f"📄 COMPREHENSIVE ANALYSIS REPORT: {filename}",
-                "="*50,
-                f"🏆 FINAL PREDICTION: {predicted_class.upper()} ({confidence_score*100:.2f}% confidence) [Best of 20 rounds]",
-                f"🏅 Best Round: {best_round_idx+1} / {rounds}",
-                "",
-                f"📖 Description: {class_descriptions[predicted_class]}",
-                "",
-                "📊 CLASS PROBABILITY DISTRIBUTION (best round average):",
-            ]
-            max_len = 20
+
+            # Improved CSS styles for HTML output (modern, clean, accessible)
+            css_styles = """
+            <style type="text/css">
+            .report-container {
+                font-family: 'Segoe UI', Arial, sans-serif;
+                background: #f4f8fb;
+                border-radius: 14px;
+                padding: 28px 28px 22px 28px;
+                margin-bottom: 36px;
+                box-shadow: 0 4px 16px rgba(30, 41, 59, 0.08);
+                border: 1px solid #e2e8f0;
+                max-width: 650px;
+            }
+            .report-title {
+                font-size: 1.35em;
+                font-weight: 700;
+                color: #1e293b;
+                margin-bottom: 10px;
+                letter-spacing: 0.01em;
+            }
+            .divider {
+                border-bottom: 2px solid #e0e7ef;
+                margin: 14px 0 20px 0;
+            }
+            .prediction-main {
+                font-size: 1.13em;
+                color: #2563eb;
+                font-weight: 600;
+                margin-bottom: 10px;
+                letter-spacing: 0.01em;
+            }
+            .desc {
+                color: #334155;
+                margin-bottom: 12px;
+                font-size: 1.01em;
+            }
+            .prob-table {
+                width: 100%;
+                border-collapse: separate;
+                border-spacing: 0 4px;
+                margin-bottom: 12px;
+            }
+            .prob-table th, .prob-table td {
+                padding: 7px 12px;
+                text-align: left;
+                border: none;
+                font-size: 0.99em;
+            }
+            .prob-table th {
+                background: #e0e7ef;
+                color: #22223b;
+                font-weight: 600;
+            }
+            .prob-bar, .prob-bar-main {
+                display: inline-block;
+                height: 18px;
+                border-radius: 7px;
+                vertical-align: middle;
+                transition: width 0.4s cubic-bezier(.4,2.3,.3,1);
+            }
+            .prob-bar {
+                background: linear-gradient(90deg, #c7d2fe 60%, #e0e7ef 100%);
+            }
+            .prob-bar-main {
+                background: linear-gradient(90deg, #6366f1 70%, #818cf8 100%);
+            }
+            .note {
+                color: #b91c1c;
+                font-weight: 500;
+                margin: 10px 0 8px 0;
+                font-size: 1.01em;
+            }
+            .metrics {
+                background: #f1f5f9;
+                border-radius: 9px;
+                padding: 12px 16px;
+                margin: 12px 0;
+                font-size: 0.98em;
+                color: #334155;
+                border-left: 4px solid #6366f1;
+            }
+            .clinical {
+                background: #fef9c3;
+                border-radius: 9px;
+                padding: 12px 16px;
+                color: #92400e;
+                margin: 12px 0 0 0;
+                font-size: 0.99em;
+                border-left: 4px solid #f59e42;
+            }
+            .filename {
+                color: #64748b;
+                font-size: 0.99em;
+                font-style: italic;
+                letter-spacing: 0.01em;
+            }
+            @media (max-width: 700px) {
+                .report-container { padding: 16px 6vw; }
+                .prob-table th, .prob-table td { padding: 6px 4vw; }
+            }
+            </style>
+            """
+
+            # Detailed HTML report
+            detail_report = [css_styles]
+            detail_report.append(f"<div class='report-container'>")
+            detail_report.append(f"<div class='report-title'>📄 Comprehensive Analysis Report: <span class='filename'>{filename}</span></div>")
+            detail_report.append(f"<div class='divider'></div>")
+            detail_report.append(
+                f"<div class='prediction-main'>🏆 Final Prediction: <b>{predicted_class.upper()}</b> "
+                f"({confidence_score*100:.2f}% confidence) <span style='font-size:0.95em;color:#64748b;'>(Best of 20 rounds)</span></div>"
+            )
+            detail_report.append(f"<div class='filename'>🏅 Best Round: {best_round_idx+1} / {rounds}</div>")
+            detail_report.append(f"<div class='desc'><b>📖 Description:</b> {class_descriptions[predicted_class]}</div>")
+
+            # Probability table
+            detail_report.append("<table class='prob-table'><tr><th>Class</th><th>Probability</th><th>Bar</th></tr>")
+            max_len = 180
             for i, class_name in enumerate(class_names):
                 percentage = best_avg_conf[i].item() * 100
                 bar_len = int(percentage / 100 * max_len)
-                bar = '█' * bar_len + ' ' * (max_len - bar_len)
-                highlight = "→" if i == top1_idx else " "
+                bar_class = "prob-bar-main" if i == top1_idx else "prob-bar"
                 detail_report.append(
-                    f"  {highlight} {class_name.title():<12} {percentage:5.2f}% |{bar}| {best_avg_conf[i].item():.4f}"
+                    f"<tr><td>{'→' if i == top1_idx else ''} {class_name.title()}</td>"
+                    f"<td>{percentage:5.2f}%</td>"
+                    f"<td><div class='{bar_class}' style='width:{bar_len}px'></div></td></tr>"
                 )
+            detail_report.append("</table>")
 
             # Optional note on closeness
             if show_dual_prediction:
-                detail_report.extend([
-                    "",
-                    "⚠️ NOTE: The second most likely class is within 20% confidence margin.",
-                    f"- Alternative Diagnosis: {second_class.title()} ({second_confidence*100:.2f}%)"
-                ])
+                detail_report.append(
+                    f"<div class='note'>⚠️ The second most likely class is within 15% confidence margin.<br>"
+                    f"- Alternative Diagnosis: <b>{second_class.title()}</b> ({second_confidence*100:.2f}%)</div>"
+                )
 
-            # Analysis metrics (assuming helper functions exist)
-            detail_report.extend([
-                "",
-                "🔍 CONFIDENCE ANALYSIS:",
-                f"- Prediction Confidence Score: {confidence_score:.4f}",
-                f"- Confidence Level: {get_confidence_level(confidence_score)}",
-                f"- Second Most Likely Class: {get_second_most_likely(best_avg_conf, class_names)}",
-                "",
-                "⚖️ PREDICTION RELIABILITY INDICATORS:",
-                f"- Probability Spread: {calculate_probability_spread(best_avg_conf):.3f} (higher is better)",
-                f"- Uncertainty Index: {calculate_uncertainty(best_avg_conf):.3f} (lower is better)",
-                "",
-                "💡 CLINICAL CONSIDERATIONS:",
-                get_clinical_considerations(predicted_class, confidence_score)
-            ])
-            detailed_reports.append("\n".join(detail_report))
+            # Analysis metrics
+            detail_report.append("<div class='metrics'>")
+            detail_report.append(f"<b>🔍 Confidence Analysis:</b><br>")
+            detail_report.append(f"- Prediction Confidence Score: <b>{confidence_score:.4f}</b><br>")
+            detail_report.append(f"- Confidence Level: {get_confidence_level(confidence_score)}<br>")
+            detail_report.append(f"- Second Most Likely Class: {get_second_most_likely(best_avg_conf, class_names)}<br>")
+            detail_report.append("<br><b>⚖️ Prediction Reliability Indicators:</b><br>")
+            detail_report.append(f"- Probability Spread: <b>{calculate_probability_spread(best_avg_conf):.3f}</b> (higher is better)<br>")
+            detail_report.append(f"- Uncertainty Index: <b>{calculate_uncertainty(best_avg_conf):.3f}</b> (lower is better)")
+            detail_report.append("</div>")
+
+            # Clinical considerations
+            detail_report.append("<div class='clinical'>")
+            detail_report.append(f"<b>💡 Clinical Considerations:</b><br>")
+            detail_report.append(get_clinical_considerations(predicted_class, confidence_score).replace('\n', '<br>'))
+            detail_report.append("</div>")
+
+            detail_report.append("</div>")  # Close report-container
+            detailed_reports.append("".join(detail_report))
 
             # Dataframe + preview state
             tumor_types_data.append([filename, predicted_class.title(), round(confidence_score * 100, 2)])
@@ -229,10 +405,10 @@ def predict_brain_tumor_batch(img_list: list) -> Tuple[str, str, List[List], Lis
                 "confidence": 0,
                 "image": None
             })
-    
+
     return (
-        "\n".join(results) if results else "No results generated",
-        "\n\n".join(detailed_reports) if detailed_reports else "No detailed reports generated",
+        "<br>".join(results) if results else "No results generated",
+        "<br><br>".join(detailed_reports) if detailed_reports else "No detailed reports generated",
         tumor_types_data,
         current_predictions
     )
@@ -240,56 +416,86 @@ def predict_brain_tumor_batch(img_list: list) -> Tuple[str, str, List[List], Lis
 
 # Helper functions
 def get_confidence_level(score: float) -> str:
-    if score > 0.95: return "⭐⭐⭐⭐⭐ Exceptional (>95%)"
-    elif score > 0.9: return "⭐⭐⭐⭐ Very High (90-95%)"
-    elif score > 0.75: return "⭐⭐⭐ High (75-90%)"
-    elif score > 0.6: return "⭐⭐ Moderate (60-75%)"
-    elif score > 0.4: return "⭐ Low (40-60%)"
-    else: return "❓ Very Low (<40%) - Consider manual review"
+    # Confidence level with structured, clear output
+    if score > 0.95:
+        return (
+            "⭐⭐⭐⭐⭐ Exceptional Confidence (>95%)\n"
+            "- The model is extremely certain about this prediction."
+        )
+    elif score > 0.9:
+        return (
+            "⭐⭐⭐⭐ Very High Confidence (90-95%)\n"
+            "- The prediction is highly reliable."
+        )
+    elif score > 0.75:
+        return (
+            "⭐⭐⭐ High Confidence (75-90%)\n"
+            "- The model is confident, but clinical review is still advised."
+        )
+    elif score > 0.6:
+        return (
+            "⭐⭐ Moderate Confidence (60-75%)\n"
+            "- The result is moderately reliable. Consider additional review."
+        )
+    elif score > 0.4:
+        return (
+            "⭐ Low Confidence (40-60%)\n"
+            "- The prediction is uncertain. Manual review is recommended."
+        )
+    else:
+        return (
+            "❓ Very Low Confidence (<40%)\n"
+            "- The model is unsure. Strongly consider manual review and further diagnostics."
+        )
 
 def get_second_most_likely(probs, classes) -> str:
-    sorted_probs = sorted(zip(probs, classes), reverse=True)
-    return f"{sorted_probs[1][1].title()} ({sorted_probs[1][0].item()*100:.2f}%)"
+    # Sort by probability, descending
+    sorted_probs = sorted(zip(probs, classes), key=lambda x: x[0], reverse=True)
+    return (
+        f"Second Most Likely: {sorted_probs[1][1].title()} "
+        f"({sorted_probs[1][0].item()*100:.2f}%)"
+    )
 
 def calculate_probability_spread(probs) -> float:
     sorted_probs = torch.sort(probs, descending=True).values
-    return sorted_probs[0] - sorted_probs[1]
+    return (sorted_probs[0] - sorted_probs[1]).item()
 
 def calculate_uncertainty(probs) -> float:
-    return -torch.sum(probs * torch.log(probs + 1e-10)).item()  # Added small epsilon to avoid log(0)
+    # Entropy: -sum(p*log(p)), add epsilon to avoid log(0)
+    return float(-torch.sum(probs * torch.log(probs + 1e-10)).item())
 
 def get_clinical_considerations(pred_class, confidence) -> str:
     considerations = {
         'glioma': [
-            "Gliomas can be aggressive and require prompt attention",
-            "Recommend follow-up with neurologist and MRI spectroscopy",
-            "Consider grading evaluation (low-grade vs high-grade)"
+            "• Gliomas can be aggressive and require prompt attention.",
+            "• Recommend follow-up with neurologist and MRI spectroscopy.",
+            "• Consider grading evaluation (low-grade vs high-grade)."
         ],
         'meningioma': [
-            "Most meningiomas are benign (WHO Grade I)",
-            "Recommend monitoring growth rate if asymptomatic",
-            "Surgical resection may be indicated for symptomatic cases"
+            "• Most meningiomas are benign (WHO Grade I).",
+            "• Recommend monitoring growth rate if asymptomatic.",
+            "• Surgical resection may be indicated for symptomatic cases."
         ],
         'notumor': [
-            "No immediate intervention needed",
-            "Recommend routine follow-up if clinically indicated",
-            "Consider alternative diagnoses if symptoms persist"
+            "• No immediate intervention needed.",
+            "• Recommend routine follow-up if clinically indicated.",
+            "• Consider alternative diagnoses if symptoms persist."
         ],
         'pituitary': [
-            "Endocrine evaluation recommended",
-            "Assess for hormonal hypersecretion syndromes",
-            "Monitor for visual field defects if macroadenoma"
+            "• Endocrine evaluation recommended.",
+            "• Assess for hormonal hypersecretion syndromes.",
+            "• Monitor for visual field defects if macroadenoma."
         ]
     }
-    
-    base = "\n".join([f"- {item}" for item in considerations[pred_class]])
+    base = "CLINICAL CONSIDERATIONS:\n" + "\n".join(considerations.get(pred_class, []))
     if confidence < 0.7:
-        base += "\n\n⚠️ NOTE: Due to lower confidence in prediction, consider:"
-        base += "\n- Additional imaging (contrast-enhanced MRI)"
-        base += "\n- Second opinion from neuroradiologist"
-        base += "\n- Clinical correlation with patient symptoms"
+        base += (
+            "\n\n⚠️ NOTE: Due to lower confidence in prediction, consider:\n"
+            "• Additional imaging (contrast-enhanced MRI).\n"
+            "• Second opinion from neuroradiologist.\n"
+            "• Clinical correlation with patient symptoms."
+        )
     return base
-
 
 
 # Initialize model

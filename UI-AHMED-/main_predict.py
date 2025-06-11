@@ -138,9 +138,9 @@ def predict_brain_tumor_batch(img_list: list) -> Tuple[str, str, List[List], Lis
             else:
                 raise ValueError(f"Unsupported image type: {type(img_data)}")
 
-            # Perform 5 rounds with 10 predictions each
+            # Perform 1 round with 10 predictions each
             rounds = 20
-            preds_per_round = 10
+            preds_per_round = 20
             round_confidences = []
 
             for r in range(rounds):

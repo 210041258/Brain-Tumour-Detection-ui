@@ -3,6 +3,13 @@ from PIL import Image
 import io
 from main_predict import predict_brain_tumor_batch  # updated function for batch
 
+
+
+
+
+
+
+
 CSS = """
 html,
 body, .gradio-container {
@@ -227,6 +234,9 @@ with gr.Blocks(css=CSS) as app:
             )
         with gr.Column(scale=1, min_width=180):
             predict_button = gr.Button("🚀 Predict", elem_id="predict-btn")
+            clear_button = gr.Button("🧹 Clear All", elem_id="clear-btn")
+
+            
 
     with gr.Tabs():
         with gr.TabItem("📋 Summary"):
@@ -235,15 +245,15 @@ with gr.Blocks(css=CSS) as app:
             detailed_report_output = gr.HTML(elem_id="detailed-html")
         with gr.TabItem("🧬 Tumor Types"):
             tumor_types_output = gr.Dataframe(
-            headers=["Image", "Prediction", "Confidence %"],
-            datatype=["str", "str", "number"],
-            interactive=True,
-            elem_id="tumor-types-df",
-            wrap=True,
-            row_count=5,
-            col_count=(3, "fixed"),
-            visible=True,
-            label="Tumor Type Predictions"
+                headers=["Image", "Prediction", "Confidence %"],
+                datatype=["str", "str", "number"],
+                interactive=True,
+                elem_id="tumor-types-df",
+                wrap=True,
+                row_count=5,
+                col_count=(3, "fixed"),
+                visible=True,
+                label="Tumor Type Predictions"
             )
 
     current_predictions = gr.State([])
@@ -254,6 +264,31 @@ with gr.Blocks(css=CSS) as app:
             preview_image = gr.Image(label="Selected Image", show_label=True, elem_id="preview-img")
         with gr.Column(scale=2):
             preview_text = gr.Markdown(elem_id="preview-md")
+
+    def clear_all():
+        return (
+            None,  # summary_output
+            None,  # detailed_report_output
+            gr.update(value=None),  # tumor_types_output
+            [],    # current_predictions
+            None,  # preview_image
+            "",    # preview_text
+            None   # image_input
+        )
+
+    clear_button.click(
+        fn=clear_all,
+        inputs=[],
+        outputs=[
+            summary_output,
+            detailed_report_output,
+            tumor_types_output,
+            current_predictions,
+            preview_image,
+            preview_text,
+            image_input
+        ]
+    )
 
     def show_image_details(evt: gr.SelectData, predictions):
         idx = evt.index[0] if isinstance(evt.index, (list, tuple)) else evt.index

@@ -7,10 +7,21 @@ from PIL import Image
 import torchvision.models as models
 from typing import List, Tuple
 import io
+import uuid
+import firebase_admin
+from firebase_admin import initialize_app
+from firebase_admin import credentials, db
+import requests  # For uploading files to GoFile
 
+# ========== CONFIGURATION ========== #
 
 MODEL_PATH = "C:\\Users\\asdal\\Downloads\\Brain-Tumour-Detection-main\\Brain-Tumour-Detection-main\\UI-AHMED-\\vit_brain_tumor.pth"
 MODEL_URL = "https://drive.google.com/uc?export=download&id=1UaFw3vAuimY6r47mYbkyFXmtsjwDjsoP"  # Updated Google Drive download link
+
+cred = credentials.Certificate("project-ml-c9e5f-firebase-adminsdk-fbsvc-2618b8c059.json")
+firebase_admin.initialize_app(cred, {
+    'databaseURL': 'https://project-ml-c9e5f-default-rtdb.asia-southeast1.firebasedatabase.app/' 
+})
 
 
 
@@ -138,9 +149,9 @@ def predict_brain_tumor_batch(img_list: list) -> Tuple[str, str, List[List], Lis
             else:
                 raise ValueError(f"Unsupported image type: {type(img_data)}")
 
-            # Perform 5 rounds with 10 predictions each
-            rounds = 20
-            preds_per_round = 10
+            # Perform 1 round with 1 predictions each
+            rounds = 1
+            preds_per_round = 1
             round_confidences = []
 
             for r in range(rounds):
@@ -393,6 +404,44 @@ def predict_brain_tumor_batch(img_list: list) -> Tuple[str, str, List[List], Lis
                 "confidence": confidence_score * 100,
                 "image": img_data
             })
+            push_to_firebase(file_path=img_data, prediction={
+
+
+                "filename": filename.split("\\")[-1] ,
+                
+                "extra": (
+                    f"class title: {predicted_class.title()}| "
+                    f"class descriptions: {class_descriptions[predicted_class]} |  "
+                    f"confidence score: {confidence_score:.4f} |  "
+                    f"best round: {best_round_idx + 1} of {rounds} |  "
+                    f"best avg confidence: {best_avg_conf.tolist()}   "
+                ),
+
+                "details": (
+                    f"Probability Spread: {calculate_probability_spread(best_avg_conf)}  | | "
+                    f"Uncertainty Index: {calculate_uncertainty(best_avg_conf)}  | | "
+                    f"Confidence Level: {get_confidence_level(confidence_score)}  | | "
+                    f"Second Most Likely: {get_second_most_likely(best_avg_conf, class_names)}  | | "
+                    f"Clinical Considerations: {get_clinical_considerations(predicted_class, confidence_score)} "
+                )
+                        , "analysis3" : (
+                f"Top-1 Class: {predicted_class.title()} with confidence {confidence_score * 100:.2f}%. | | "
+                f"Top-2 Class: {second_class.title()} with confidence {second_confidence * 100:.2f}%. | | "
+                f"Prediction confidence across classes: {best_avg_conf.tolist()}. | | "
+                f"Best result obtained in round {best_round_idx + 1} of {rounds}. | | "
+                
+            )
+                        ,"analysis2" : (
+            f"Top Prediction: {predicted_class.title()} ({confidence_score * 100:.2f}%) | |  "
+            f"Second Prediction: {second_class.title()} ({second_confidence * 100:.2f}%) | | "
+            f"Best Round: {best_round_idx + 1} of {rounds} |  |  "
+            f"Avg Confidence Per Class: {best_avg_conf.tolist()}  "
+        )
+
+
+}
+    
+                )
 
         except Exception as e:
             error_msg = f"❌ Error processing image {idx}: {str(e)}"
@@ -412,6 +461,57 @@ def predict_brain_tumor_batch(img_list: list) -> Tuple[str, str, List[List], Lis
         tumor_types_data,
         current_predictions
     )
+
+PIXELDRAIN_API_KEY = "91d780db-af6e-4cc9-b3f2-1f80ba77817c"  # Replace with your Pixeldrain API key
+import base64    
+import os
+
+
+def upload_file_gofile(file_path: str) -> str:
+
+    file_name = os.path.basename(file_path)
+    url = f"https://pixeldrain.com/api/file/{file_name}"
+    
+    headers = {}
+    if PIXELDRAIN_API_KEY:
+        # Authorization: Basic :<API‑KEY> (حقل username فارغ)
+        token = base64.b64encode(f":{PIXELDRAIN_API_KEY}".encode()).decode()
+        headers["Authorization"] = f"Basic {token}"
+    
+    with open(file_path, "rb") as f:
+        resp = requests.put(url, data=f, headers=headers, timeout=60)
+    
+    if resp.status_code in (200, 201):
+        data = resp.json()
+        file_id = data.get("id") or data.get("data", {}).get("id")
+        print(f"File uploaded successfully: {file_id}")
+        if not file_id:
+            raise Exception(f"Unexpected response: {data}")
+        return f"https://pixeldrain.com/api/file/{file_id}"
+    else:
+        raise Exception(f"Upload failed {resp.status_code}: {resp.text}")
+
+
+def push_to_firebase(file_path, prediction):
+
+    gofile_url = upload_file_gofile(file_path)
+
+ 
+    unique_id = str(uuid.uuid4())
+
+    data = {
+         "filename": prediction.get("filename", "")
+        , "extra": prediction.get("extra", "")
+        , "url": gofile_url
+        , "details": prediction.get("details", "")
+        , "analysis2": prediction.get("analysis2", "")
+        , "analysis3": prediction.get("analysis3", ""),
+        "id": unique_id
+    }
+
+
+    ref = db.reference("predication")
+    ref.child(unique_id).set(data)
 
 
 # Helper functions

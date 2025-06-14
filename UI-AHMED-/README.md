@@ -18,3 +18,5 @@
 ## Note : the report is created for just one probability which is the most reading probability of the model 
 
 ## Note : UI wourld have some Ux BESIDED thats offer more better usage 
+
+## Assets : ["MODEL_PATH in main_predicate","yourfirebase-ifyouhaveprivateone-you can-use-mine-c059.json"]
